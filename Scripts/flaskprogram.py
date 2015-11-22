@@ -6,6 +6,7 @@ from json import JSONDecoder
 from json import JSONEncoder
 from flask import jsonify
 from pyspark import SparkContext
+import pygal
 import matplotlib.pyplot as plt
 app = Flask(__name__)
 
@@ -28,20 +29,23 @@ def top_ten_movies():
 
     lines = sc.textFile(sys.argv[2], 1)
     line1 = lines.filter(lambda line: "movieId" not in line)    
-    counts = line1.map(lambda x: (x.split(',')[0], (x.split(',')[1])))
+    counts = line1.map(lambda x: (x.split(',')[0], x.split(',')[1]) if "\"" not in x else ((x.split(',')[0], x.split('\"')[1])))
     output1 = counts.collect()
     ans={}
     for (a,b) in output1:
         ans[int(a)]=b;
     i=1;
     toprint={}
+    html = "<html><head><title>Top Ten Rated Movies</title></head><body>"
     for (word, count) in output:
+        html = html + "<h5>" + ans[int(word)] + "</h5>"
         toprint[i] = ans[int(word)]
         if i==10:
             break
         i = i  + 1;
     sc.stop()
-    return jsonify(toprint) 
+    html = html + "</body></html>"
+    return html 
 
 
 @app.route('/ratinggraph',methods=['GET'])
@@ -72,11 +76,16 @@ def ratinggraph():
         i = i + 1;
         print "%s\t%s" % (word, count)
 
-    fig = plt.figure(figsize=(10,10))
-    plt.plot(xx,yy)  
-    plt.show()
+    #fig = plt.figure(figsize=(10,10))
+    #plt.plot(xx,yy)  
+    #plt.show()
+    date_chart = pygal.Line(height=250,range=(0, 10))
+    date_chart.x_labels = xx
+    date_chart.add("Rating", yy)
+    title = "Rating of a Movie"
+    html = """<html><head><title>%s</title></head><body>%s</body></html>""" % (title, date_chart.render())
     sc.stop()
-    return 'Done!'
+    return html
 
     
      
