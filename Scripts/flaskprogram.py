@@ -29,7 +29,7 @@ def top_ten_movies():
 
     lines = sc.textFile(sys.argv[2], 1)
     line1 = lines.filter(lambda line: "movieId" not in line)    
-    counts = line1.map(lambda x: (x.split(',')[0], x.split(',')[1]) if "\"" not in x else ((x.split(',')[0], x.split('\"')[1])))
+    counts = line1.map(lambda x: (x.split(',')[0], (x.split(',')[1],x.split(',')[2])) if "\"" not in x else (x.split(',')[0], (x.split('\"')[1],x.split(',')[-1])))
     output1 = counts.collect()
     ans={}
     for (a,b) in output1:
@@ -38,8 +38,8 @@ def top_ten_movies():
     toprint={}
     html = "<html><head><title>Top Ten Rated Movies</title></head><body>"
     for (word, count) in output:
-        html = html + "<h5>" + ans[int(word)] + "</h5>"
-        toprint[i] = ans[int(word)]
+        html = html + "<h5>" + ans[int(word)][0] + "\t" + ans[int(word)][1] + "</h5>"
+        toprint[i] = ans[int(word)][0] + "\t" + ans[int(word)][1]
         if i==10:
             break
         i = i  + 1;
@@ -87,6 +87,50 @@ def ratinggraph():
     sc.stop()
     return html
 
+
+@app.route('/genre',methods=['GET'])
+def genretype():
+    genre = request.args.get('genre').lower()
+    sc = SparkContext(appName="rating")    
+    
+    lines = sc.textFile(sys.argv[2], 1)
+    line2 = lines.filter(lambda line: "movieId" not in line) 
+    line1 = line2.filter(lambda line: genre  in line.lower())   
+    counts = line1.map(lambda x: (x.split(',')[0], (x.split(',')[1],x.split(',')[2])) if "\"" not in x else (x.split(',')[0], (x.split('\"')[1],x.split(',')[-1])))
+    output1 = counts.collect()
+    req = []
+    ans={}
+    for (a,b) in output1:
+        ans[int(a)]=b
+        req.append(a)
+    
+    i=1;
+    
+
+    lines = sc.textFile(sys.argv[1], 1)
+    line1 = lines.filter(lambda line: "movieId" not in line)
+    counts = line1.map(lambda x: (x.split(',')[1], float(x.split(',')[2]))) \
+                  .reduceByKey(add)
+    output = counts.sortBy(lambda x: -x[1]).collect()
+
+        
+    
+    toprint={}
+    html = "<html><head><title>Top Ten "+ genre +"  Movies</title></head><body>"
+    for (word, count) in output:
+        if word in req:
+            html = html + "<h5>" + ans[int(word)][0] + " \t " + ans[int(word)][1] + "</h5>"
+            toprint[i] = ans[int(word)][0] + " \t " + ans[int(word)][1]
+            if i==10:
+                break
+            i = i  + 1;
+    sc.stop()
+    if i==1:
+        html = html + "<h5> No Movies of " + genre + "found </h5>"
+    html = html + "</body></html>"
+    return html 
+    
+    
     
      
 
